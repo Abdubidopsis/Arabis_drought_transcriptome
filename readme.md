@@ -16,7 +16,7 @@ This study explores the differential gene expression and regulatory patterns in 
 | `Supp-stat-3_annotation.xlsx`                 | Gene annotations of DEGs. |
 | `Supp-stat-4_orthologues.xlsx`                | Orthologue mapping between Arabis and Arabidopsis. |
 | `Supp-stat-5_all_stress_targets_Asagittata.xlsx` | miRNA target genes under stress in A. sagittata. |
-| `Supp-stat-6_EPM_filtered_occurence.xlsx',`Supp-stat-7.ods`, `Supp-stat-8.ods`, `Supp-stat-9.ods`Supp-stat-10.ods`,`Supp-stat-11.ods`, `Supp-stat-12.xlsx`, `Supp-stat-13.ods` | Expression Predictive Motifs related analysis |
+| `Supp-stat-6_EPM_filtered_occurence.xlsx`,`Supp-stat-7.ods`, `Supp-stat-8.ods`, `Supp-stat-9.ods`, `Supp-stat-10.ods`,`Supp-stat-11.ods`, `Supp-stat-12.xlsx`, `Supp-stat-13.ods` | Expression Predictive Motifs related analysis |
 
 ## 📊 Methods
 
