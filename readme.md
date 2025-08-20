@@ -11,8 +11,9 @@ This study explores the differential gene expression and regulatory patterns in 
 | File Name                                      | Description |
 |-----------------------------------------------|-------------|
 | `Arabis_Drought_transcriptome.R`              | Main R script used for transcriptome analysis and visualization. |
-| `Supp-stat-1.xlsx`                             | Summary statistics of RNA-seq reads. |
-| `Supp-stat-2.xlsx`                             | DEGs under drought in A. sagittata. |
+| `Table-S1.xlsx`                               | Phenotypes of Arabis nemonresis and Arabis sagittata measured during the dry down experiment. | 
+| `Table-S3.xlsx`                               | Analysis of differential gene expression in Arabis nemonresis and Arabis sagittata in stress and recovery. |
+| `Table-S9.ods`                                | Filtered annotations of EPM occurrence within the genomes of A. nemorensis and A. sagitatta |
 | `Supp-stat-3_annotation.xlsx`                 | Gene annotations of DEGs. |
 | `Supp-stat-4_orthologues.xlsx`                | Orthologue mapping between Arabis and Arabidopsis. |
 | `Supp-stat-5_all_stress_targets_Asagittata.xlsx` | miRNA target genes under stress in A. sagittata. |
