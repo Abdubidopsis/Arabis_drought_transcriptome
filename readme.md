@@ -4,7 +4,7 @@ This repository contains supplemental data and scripts associated with the analy
 
 ## 🧪 Project Description
 
-This study explores the differential gene expression and regulatory patterns in **Arabis sagittata** and **Arabis nemorensis** under drought stress. It includes high-resolution transcriptome analysis, functional annotation, and exploration of miRNA-target interactions.
+This study explores the differential gene expression and regulatory patterns in **Arabis sagittata** and **Arabis nemorensis** under drought stress. It includes high-resolution transcriptome analysis, Expression prediction and enrichments, and exploration of miRNA-target interactions.
 
 ## 📁 Repository Contents
 
