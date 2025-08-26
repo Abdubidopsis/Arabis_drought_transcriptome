@@ -38,8 +38,6 @@ It includes:
 
 ### 🧬 Sequence Alignments
 - **File-S1.fas** – Alignment of *miR408* with EPMs across *A. thaliana*, *A. nemorensis*, *A. sagittata*  
-- **File-S2.fas** – Alignment of predicted *miR408* targets with EPMs across species  
-
 ---
 
 ## 📊 Methods
