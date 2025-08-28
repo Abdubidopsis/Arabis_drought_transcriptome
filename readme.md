@@ -18,22 +18,24 @@ It includes:
 ## 📁 Repository Contents
 
 ### 🔬 Analysis Scripts
-R
-	•	Arabis_Drought_transcriptome.R — primary workflow for drought transcriptome analysis and visualization
-	•	EPM_DGEenrichment_analyses.v3.2.R — functional enrichment of EPM-associated differentially expressed genes
-	•	EPM_Quadrant_enrichment_2025F.v2.1.R — quadrant-based enrichment of motif–gene associations
-	•	EPM_cluster_venn_analysis.sz.v1.k25.R — cluster overlap and Venn analysis across treatments/species
-	•	GO-EPMs_species_comp.sz.v1.2.cluster.R — comparative Gene Ontology enrichment linked to EPMs
-	•	add_logMedTPM_no0_balanced_classification.2.R — balanced classification pipeline for expression prediction
-	•	FDR_calc_multi.v1.0.R — multiple-testing FDR calculations
-	•	corr_prediction_multi.v1.0.R — correlation-based expression prediction across datasets
+## R
 
-Python
-	•	epm_to_reference_alingment.0.py — maps EPM sequences to the reference (alignment)
-	•	extract_fasta_seq.0.py — extracts sequences from FASTA by ID
-	•	generate_deg_go_analyses_with_plots.2.py — runs DEG + GO analyses and produces plots
-	•	generate_saliency_map_results_plots.up-do.py — visualizes saliency-map outputs
-	•	generate_training_results_plots.0.py — generates model training results plots
+- **Arabis_Drought_transcriptome.R** — primary workflow for drought transcriptome analysis and visualization
+- **EPM_DGEenrichment_analyses.v3.2.R** — functional enrichment of EPM-associated differentially expressed genes
+- **EPM_Quadrant_enrichment_2025F.v2.1.R** — quadrant-based enrichment of motif–gene associations
+- **EPM_cluster_venn_analysis.sz.v1.k25.R** — cluster overlap and Venn analysis across treatments/species
+- **GO-EPMs_species_comp.sz.v1.2.cluster.R** — comparative Gene Ontology enrichment linked to EPMs
+- **add_logMedTPM_no0_balanced_classification.2.R** — balanced classification pipeline for expression prediction
+- **FDR_calc_multi.v1.0.R** — multiple-testing FDR calculations
+- **corr_prediction_multi.v1.0.R** — correlation-based expression prediction across datasets
+
+## Python
+
+- **epm_to_reference_alingment.0.py** — maps EPM sequences to the reference (alignment)
+- **extract_fasta_seq.0.py** — extracts sequences from FASTA by ID
+- **generate_deg_go_analyses_with_plots.2.py** — runs DEG + GO analyses and produces plots
+- **generate_saliency_map_results_plots.up-do.py** — visualizes saliency-map outputs
+- **generate_training_results_plots.0.py — generates** model training results plots
 
 ### 📊 Supplemental Data
 - **Table-S1.xlsx** – Phenotypic data from dry-down experiment (*A. nemorensis* & *A. sagittata*)  
