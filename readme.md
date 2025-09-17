@@ -43,7 +43,8 @@ It includes:
 - **Table-S7.ods** – Extracted EPMs from treatments with cluster assignment & TF database matches  
 - **Table-S9.ods** – Filtered genome-wide annotations of EPM occurrence  
 - **Table-S10.ods** – DEGs linked to Gene Ontology terms and associated EPMs
-- **Table-S12.ods** – EPM and TFBS occurrence in *miR408* locus  
+- **Table-S12.ods** – EPM and TFBS occurrence in *miR408* locus
+- **Table-S13.csv** - miRNA normalized expression matrix for Arabis sagittata and Arabis nemorensis in control, wilting and recovery
 
 ### 🧬 Sequence Alignments
 - **File-S1.fas** – Alignment of *miR408* with EPMs across *A. thaliana*, *A. nemorensis*, *A. sagittata*  
