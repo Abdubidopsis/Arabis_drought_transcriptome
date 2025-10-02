@@ -21,6 +21,7 @@ It includes:
 ## R
 
 - **Arabis_Drought_transcriptome.R** — primary workflow for drought transcriptome analysis and visualization
+- **drought_phenotypes.R** - phenotypic analysis of different traits measured during the drought
 - **EPM_DGEenrichment_analyses.v3.2.R** — functional enrichment of EPM-associated differentially expressed genes
 - **EPM_Quadrant_enrichment_2025F.v2.1.R** — quadrant-based enrichment of motif–gene associations
 - **EPM_cluster_venn_analysis.sz.v1.k25.R** — cluster overlap and Venn analysis across treatments/species
