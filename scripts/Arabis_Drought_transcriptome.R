@@ -1,7 +1,10 @@
-###--Differential expression analysis of HTSeqcounts using DESeq2--#######################
-###' Abdul Saboor Khan (abdul.suboor123@yahoo.com) -- first created on 16.Jan.2023 - last modified on 11th July 2025.
+###--Differential expression analysis using DESeq2--#######################
+###' Abdul Saboor Khan (abdul.suboor123@yahoo.com) -- first created on 16.Jan.2023 - 
+###' Modified on 11th July 2025
+###' Last modified on 20th February 2026.
 ###' This script runs for Arabis sagittata and nemorensis counts files to find differential expression
-###' first, get the counts file from the mapping (sam) files by htseq-counts in bash
+###' first, get the counts file from the mapping (sam) files by using htseq-counts in bash
+#### here the name "survival" used has been renamed as "recovery" in the paper
 
 #rm(list=ls()) #clean the global environment
 #dev.off() # clean the plot window
@@ -149,6 +152,9 @@ resultsNames(dds_test)
 nemwilt_sagwilt <- results(dds_test, name = "group_nemorensiswilting_vs_sagitattawilting")
 #write.csv(nemwilt_sagwilt, "script_for_juliette/new_go_output_from_deseqdrought_all/nemwilt_sagwilt.csv")
 
+# Extract contrasts for recovery vs. wilting within each species
+sagsurv_sagwilt <- results(dds_test, name = "group_sagitattasurvival_vs_sagitattawilting")
+#write.csv(sagsurv_sagwilt, "script_for_juliette/new_go_output_from_deseqdrought_all/sagsurv_sagwilt.csv")
 
 ####ref "nemorensiswilting" ####
 dds$group<- relevel(dds$group, ref = "nemorensiswilting")
@@ -158,6 +164,10 @@ resultsNames(dds_test)
 
 sagwilt_nemwilt <- results(dds_test, name = "group_sagitattawilting_vs_nemorensiswilting")
 #write.csv(sagwilt_nemwilt, "script_for_juliette/new_go_output_from_deseqdrought_all/sagwilt_nemwilt.csv")
+
+nemsurv_nemwilt <- results(dds_test, name = "group_nemorensissurvival_vs_nemorensiswilting")
+#write.csv(nemsurv_nemwilt, "script_for_juliette/new_go_output_from_deseqdrought_all/nemsurv_nemwilt.csv")
+
 
 ####ref "nemorensiscontrol" ####
 dds$group<- relevel(dds$group, ref = "nemorensiscontrol")
@@ -477,7 +487,7 @@ p
 
 
 x <- ggplot(pcaData, aes(PC1, PC2, color = condition, shape = genotype)) +
-  geom_point(size = 5) +
+  geom_point(size = 8, alpha = 0.5 ) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
   coord_fixed() + theme(
@@ -486,124 +496,15 @@ x <- ggplot(pcaData, aes(PC1, PC2, color = condition, shape = genotype)) +
     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
     legend.key.size = unit(2, "lines"),  # Adjust the size of the legend
     legend.text = element_text(size = 12),  # Adjust the font size of legend text
-    legend.title = element_text(size = 14, face = "bold"), axis.text = element_text(size = 14), axis.title = element_text(size = 14)  # Adjust the font size and style of the legend title
+    legend.title = element_text(size = 14, face = "bold"), axis.text = element_text(size = 18), axis.title = element_text(size = 18)  # Adjust the font size and style of the legend title
   )
 
 
 x 
 
-#ggsave("script_for_juliette/new_go_output_from_deseqdrought_all/pca_all_samples.png", plot = x, width = 9, height = 7, dpi = 300)
-#ggsave("script_for_juliette/new_go_output_from_deseqdrought_all/pca_all_samples.pdf", plot = x, width = 9, height = 7, dpi = 300)
-
-
-
-#### Random forest ----- Get expression matrix#############
-#vsd <- vst(dds, blind=FALSE)
-#expr <- t(assay(vsd))  # samples x genes
-
-# Make sure it's all numeric and well-formatted
-#expr_df <- as.data.frame(expr)
-#expr_df$genotype <- as.factor(colData(vsd)$genotype)  # label column
-
-# Check for NAs or non-numeric columns (just in case)
-#stopifnot(all(sapply(expr_df[, -ncol(expr_df)], is.numeric)))
-
-# Run Random Forest
-#rf_model <- randomForest(species ~ ., data = expr_df, importance = TRUE, ntree = 500)
-
-# 3. View importance of genes
-#varImpPlot(rf_model)
-#important_genes <- importance(rf_model)
-
-
-library(xgboost)
-library(tidyverse)
-library(e1071)              # Load it in your script or session
-library(nnet)
-
-# Format data
-#expr <- t(normalized_counts)  # Samples as rows
-#labels <- colData(dds)$genotype  # Factor label e.g., "sag", "nem"
-#labels_numeric <- as.numeric(as.factor(labels)) - 1  # Convert to 0/1
-
-#dtrain <- xgb.DMatrix(data = expr, label = labels_numeric)
-
-# Train model
-#xgb_model <- xgboost(data = dtrain, nrounds = 50, objective = "binary:logistic", verbose = 0)
-
-# Feature importance
-#importance <- xgb.importance(model = xgb_model)
-#xgb.plot.importance(importance)
-
-
-# Data prep
-df <- as.data.frame(t(normalized_counts))
-df$label <- colData(dds)$genotype
-
-# Train/test split
-set.seed(123)
-train_idx <- sample(1:nrow(df), size = 0.7 * nrow(df))
-train <- df[train_idx, ]
-test <- df[-train_idx, ]
-
-# SVM training
-svm_model <- svm(label ~ ., data = train, kernel = "linear")
-
-# Predict & accuracy
-pred <- predict(svm_model, test)
-table(pred, test$label)
-
-# Simulate multi-condition timepoint label
-multi_label <- paste(colData(dds)$genotype, colData(dds)$timepoint, sep = "_")
-df <- as.data.frame(t(normalized_counts))
-df$label <- as.factor(multi_label)
-
-# Fit model
-multinom_model <- multinom(label ~ ., data = df)
-summary(multinom_model)
-
-
-# 1. Calculate variance of each gene
-var_genes <- apply(normalized_counts, 1, var)
-
-# 2. Select top 100 most variable genes
-top_genes <- names(sort(var_genes, decreasing = TRUE))[1:100]
-
-# 3. Subset your data
-df <- as.data.frame(t(normalized_counts[top_genes, ]))
-df$label <- as.factor(paste(colData(dds)$genotype, colData(dds)$timepoint, sep = "_"))
-multinom_model <- multinom(label ~ ., data = df)
-summary(multinom_model)
-
-
-
-# Boruta requires data.frame input
-df <- as.data.frame(t(normalized_counts))
-df$label <- as.factor(colData(dds)$genotype)
-
-# Run Boruta
-set.seed(123)
-boruta_result <- Boruta(label ~ ., data = df, doTrace = 2)
-
-# Final selection
-final <- TentativeRoughFix(boruta_result)
-plot(final)
-getSelectedAttributes(final)
-
-
-library(survival)
-library(randomForestSRC)
-
-# Survival data: assuming you have 'days_survived' and 'status'
-surv_data <- data.frame(t(normalized_counts))
-surv_data$days <- survival
-surv_data$status <- your_status_vector  # 1 = event (death), 0 = censored
-
-# Fit Cox model
-cox_model <- coxph(Surv(days, status) ~ ., data = surv_data)
-summary(cox_model)
-
-
+#ggsave("pca_all_samples_transparent.png", plot = x, width = 9, height = 7, dpi = 300)
+#ggsave("pca_all_samples_transparent.svg", plot = x, width = 9, height = 7, dpi = 300)
+#ggsave("pca_all_samples_transparent.pdf", plot = x, width = 9, height = 7, dpi = 300)
 
 #########################################################################
 #########################################################################
@@ -688,6 +589,137 @@ normalized_counts <- counts(dds_lowcount, normalized = TRUE)
 res_dds_gxe_surv_significant <- subset(res_dds_gxe_surv, padj < 0.05)
 
 #write.csv(res_dds_gxe_surv_significant, "res_dds_gxe_surv_ctrl_significant_1973.csv")
+
+
+
+
+##########################################################################
+##########################################################################
+###############                          #################################
+############### GxE wilting and Recovery #################################
+###############                          #################################
+##########################################################################
+##########################################################################
+
+### A nemorensis and A sagittata #####
+setwd("/Users/Shared/Files From d.localized/PhD-Uni-Koeln_2021-2024/PhD_work/seeds data/2nd Experiment 2022/transcriptome/Arabis_RNA_raw_data/90-774066047/anaylsis_drought_mRNA_both_species_with_new_two_genomes/analysis_both_species_with_nem_genomes/GxE_surv_wilt/")
+directory <- "/Users/Shared/Files From d.localized/PhD-Uni-Koeln_2021-2024/PhD_work/seeds data/2nd Experiment 2022/transcriptome/Arabis_RNA_raw_data/90-774066047/anaylsis_drought_mRNA_both_species_with_new_two_genomes/analysis_both_species_with_nem_genomes/GxE_surv_wilt/"
+###-- define the pattern of files to be analysed, the file should end as ".txt" ######
+sampleFiles <- grep("txt",list.files(directory),value=TRUE)
+condition <- c("survival", "survival", "survival", "wilting", "wilting", "wilting", "wilting", "survival", "survival", "survival", "wilting", "wilting", "wilting", "wilting")
+genotype <- c('nemorensis', 'nemorensis', 'nemorensis', 'nemorensis', 'nemorensis','nemorensis', 'nemorensis', 'sagitatta','sagitatta','sagitatta','sagitatta','sagitatta','sagitatta','sagitatta')
+sampleTable <- data.frame(sampleName = sampleFiles, fileName = sampleFiles, condition = condition, genotype = genotype)
+sampleTable$condition <- factor(sampleTable$condition)
+sampleTable$genotype <- factor(sampleTable$genotype)
+
+##--deseq_from_htseqcount######
+ddsHTSeq <- DESeqDataSetFromHTSeqCount(sampleTable = sampleTable, directory = directory, design = ~ genotype + condition + genotype:condition) #--(design= ~ genotype + condition + genotype:condition)--##
+
+# Filter out genes with low counts across all samples
+#--- get DEG ---#
+#count_threshold <- 100  # Minimum total counts across samples
+count_threshold <- 100  # Minimum average count threshold
+num_samples <- 14       # Total number of samples
+ddsHTSeq <- ddsHTSeq[rowSums(counts(ddsHTSeq)) / num_samples > count_threshold, ]
+# Run the DESeq pipeline
+dds <- DESeq(ddsHTSeq, fitType = "mean")
+res_dds_gxe_surv_wilt <- results(dds)
+
+##Filtering genes with low counts_normalization ###
+dds_lowcount <- estimateSizeFactors(dds)
+sizeFactors(dds_lowcount)
+normalized_counts <- counts(dds_lowcount, normalized = TRUE)
+
+# Further filter res_dds_filtered to keep only those genes with padj < 0.05
+res_dds_gxe_surv_wilt_significant <- subset(res_dds_gxe_surv_wilt, padj < 0.05)
+
+#write.csv(res_dds_gxe_significant, "res_dds_gxe_wilt_ctrl_significant_3980.csv")
+
+
+
+##################################################################
+####################### plot survival against wilt ################
+# Ensure the gene IDs are aligned ####
+####### corrected after thesis submission, 6th May 2025 , this is the final plot #######
+# Ensure the gene IDs are aligned
+common_genes_sag_nem_surv_wilt <- intersect(rownames(sagsurv_sagwilt), rownames(nemsurv_nemwilt))
+
+# Subset to common genes
+sag_surv_wilt_common <- sagsurv_sagwilt[common_genes_sag_nem_surv_wilt, ]
+nem_surv_wilt_common <- nemsurv_nemwilt[common_genes_sag_nem_surv_wilt, ]
+
+
+# Combine data from wilt and control contrasts
+combined_species_df_sag_nem_surv_wilt <- data.frame(
+  gene_id = common_genes_sag_nem_surv_wilt,
+  log2FC_sag = sag_surv_wilt_common$log2FoldChange,
+  padj_sag = sag_surv_wilt_common$padj,
+  log2FC_nem = nem_surv_wilt_common$log2FoldChange,
+  padj_nem = nem_surv_wilt_common$padj
+)
+
+# Add GxE information
+gxe_common <- res_dds_gxe_surv_wilt[common_genes_sag_nem_surv_wilt, ]
+combined_species_df_sag_nem_surv_wilt$padj_gxe <- gxe_common$padj
+
+# Remove NA values from the combined_species_df_sag_nem
+combined_species_df_sag_nem_surv_wilt <- na.omit(combined_species_df_sag_nem_surv_wilt)
+
+# Filter out genes that do not differ in expression between species in at least one time point
+#combined_species_df_sag_nem <- combined_species_df_sag_nem[
+#  combined_species_df_sag_nem$padj_wilt < 0.05 | combined_species_df_sag_nem$padj_ctrl < 0.05, 
+#]
+
+# Redefine the color categories
+combined_species_df_sag_nem_surv_wilt$color <- ifelse(
+  combined_species_df_sag_nem_surv_wilt$padj_gxe < 0.05, "red", # Significant in GxE (padj < 0.001)
+  ifelse(
+    combined_species_df_sag_nem_surv_wilt$padj_sag < 0.05 & combined_species_df_sag_nem_surv_wilt$padj_nem < 0.05, "green", # Significant in both wilt and recovery
+    "gray" # Non-significant in both
+  )
+)
+
+#write.csv(combined_species_df_sag_nem, "combined_species_df_sag_nem_wilt_ctrl.csv")
+
+
+# Plot with prioritized layers
+p <- ggplot(combined_species_df_sag_nem_surv_wilt) +
+  geom_point(data = subset(combined_species_df_sag_nem_surv_wilt, color == "gray"), aes(x = log2FC_nem, y = log2FC_sag, color = color), size = 0.7, alpha = 0.7) +
+  geom_point(data = subset(combined_species_df_sag_nem_surv_wilt, color == "green"), aes(x = log2FC_nem, y = log2FC_sag, color = color), size = 0.7, alpha = 0.7) +
+  geom_point(data = subset(combined_species_df_sag_nem_surv_wilt, color == "red"), aes(x = log2FC_nem, y = log2FC_sag, color = color), size = 0.7, alpha = 0.7) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +  # Central vertical line
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +  # Central horizontal line
+  labs(
+    y = expression(Log[2]~FC~italic("A. sagittata")~"(recov vs stress)"),
+    x = expression(Log[2]~FC~italic("A. nemorensis")~"(recov vs stress)"),
+    color = "Significance", title = expression(paste("Exp. diff. b/w ",italic("A. nemorensis"), " and", italic(" A. sagittata"), " at recovery"))
+  ) +
+  scale_color_manual(
+    values = c("gray" = "gray", "green" = "darkgreen", "red" = "darkred"),
+    labels = c("gray" = "NS", "green" = "Significant E ", "red" = "GxE (padj < 0.001)")
+  ) +
+  guides(
+    color = guide_legend(
+      override.aes = list(size = 4)  # Increase the size of legend dots
+    )
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 24),
+    axis.title = element_text(size = 24, face = "bold"),
+    legend.text = element_text(size = 20),
+    legend.title = element_blank(), plot.title = element_text(size= 26)
+  ) +
+  ylim(-10, 10) + xlim(-10, 10)
+
+# Print the plot
+print(p)
+
+#ggsave("recov_vs_stress_species_comparison.png", plot = p, width = 11, height = 7, dpi = 300)
+#ggsave("recov_vs_stress_species_comparison.pdf", plot = p, width = 11, height = 7, dpi = 300)
+#ggsave("recov_vs_stress_species_comparison.svg", plot = p, width = 11, height = 7, dpi = 300)
+
+
 
 
 ##################################################################
@@ -872,7 +904,7 @@ combined_species_df_sag_nem <- combined_species_df_sag_nem %>%
   )
 
 setwd("/Users/Shared/Files From d.localized/PhD-Uni-Koeln_2021-2024/PhD_work/seeds data/2nd Experiment 2022/transcriptome/Arabis_RNA_raw_data/90-774066047/anaylsis_drought_mRNA_both_species_with_new_two_genomes/analysis_both_species_with_nem_genomes/script_for_juliette/new_go_output_from_deseqdrought_all/")
-#write.csv(combined_species_df_sag_nem_wilt_ctrl, "combined_species_df_sag_nem_wilt_ctrl_quadrants.csv")
+#write.csv(combined_species_df_sag_nem, "combined_species_df_sag_nem_wilt_ctrl_quadrants.csv")
 # Save each quadrant's data to a CSV file
 #for (q in unique(combined_log2fc_df$quadrant)) {
 #  quad_data <- combined_log2fc_df %>% filter(quadrant == q)
@@ -900,6 +932,29 @@ combined_species_df_sag_nem_surv <- combined_species_df_sag_nem_surv %>%
   )
 
 #write.csv(combined_species_df_sag_nem_surv, "combined_species_df_sag_nem_surv_ctrl_quadrants.csv")
+
+
+
+######### SPLIT THE REC_AND_CTRL OBJECT INTO QUADRANTS #########
+# Add columns to classify points based on their positions relative to vline, hline, and diagonal
+combined_species_df_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  mutate(
+    above_diag = log2FC_sag > log2FC_nem,
+    above_hline = log2FC_sag > 0,
+    right_vline = log2FC_nem > 0,
+    quadrant = case_when(
+      above_diag & above_hline & right_vline ~ "Q1",
+      above_diag & above_hline & !right_vline ~ "Q2",
+      !above_diag & above_hline & !right_vline ~ "Q3",
+      !above_diag & !above_hline & !right_vline ~ "Q4",
+      !above_diag & !above_hline & right_vline ~ "Q5",
+      above_diag & !above_hline & right_vline ~ "Q6",
+      above_diag & !above_hline & !right_vline ~ "Q7",
+      !above_diag & above_hline & right_vline ~ "Q8"
+    )
+  )
+
+#write.csv(combined_species_df_sag_nem_surv_wilt, "New_GO_analysis_6thMay2025/combined_species_df_sag_nem_surv_wilt_quadrants.csv")
 
 
 
@@ -932,6 +987,9 @@ new_dataframe1 <- data.frame(orthologues)
 combined_species_df_sag_nem <- combined_species_df_sag_nem %>%
   left_join(new_dataframe1, by = c("gene_id" = "arabis_cleaned"))
 
+#write.csv(combined_species_df_sag_nem, "combined_species_df_sag_nem_with_ortho.csv")
+
+
 # Remove genes without an orthologue
 combined_species_df_sag_nem <- combined_species_df_sag_nem %>%
   filter(!is.na(At))
@@ -941,9 +999,20 @@ combined_species_df_sag_nem <- combined_species_df_sag_nem %>%
 combined_species_df_sag_nem_surv <- combined_species_df_sag_nem_surv %>%
   left_join(new_dataframe1, by = c("gene_id" = "arabis_cleaned"))
 
+#write.csv(combined_species_df_sag_nem_surv, "combined_species_df_sag_nem_surv_with_ortho.csv")
+
+
 # Remove genes without an orthologue
 combined_species_df_sag_nem_surv <- combined_species_df_sag_nem_surv %>%
   filter(!is.na(At))
+
+
+# Fix column names like At.x, At.x.x, At.y etc.
+#colnames(combined_species_df_sag_nem_surv) <- gsub("\\.x+|\\.y+", "", colnames(combined_species_df_sag_nem_surv))
+
+#combined_species_df_sag_nem_surv <- combined_species_df_sag_nem_surv[ , !grepl("^At\\.\\d+$", colnames(combined_species_df_sag_nem_surv))]
+
+#colnames(combined_species_df_sag_nem_surv) <- make.unique(colnames(combined_species_df_sag_nem_surv))
 
 # ========================== STEP 2: Define Universes ==========================
 ### split on diagonal
@@ -984,15 +1053,20 @@ left_universe_sag_nem_surv <- combined_species_df_sag_nem_surv %>%
 right_universe_sag_nem_surv <- combined_species_df_sag_nem_surv %>%
   filter(log2FC_nem > 0)
 
+#write.csv(left_universe_sag_nem, "left_universe_sag_nem_wilt.csv")
+#write.csv(right_universe_sag_nem, "right_universe_sag_nem_wilt.csv")
+
+
+#write.csv(left_universe_sag_nem_surv, "left_universe_sag_nem_recovery.csv")
+#write.csv(right_universe_sag_nem_surv, "right_universe_sag_nem_recovery.csv")
+
 
 # ========================== STEP 3: Perform GO Enrichments ==========================
 setwd("/Users/Shared/Files From d.localized/PhD-Uni-Koeln_2021-2024/PhD_work/seeds data/2nd Experiment 2022/transcriptome/Arabis_RNA_raw_data/90-774066047/anaylsis_drought_mRNA_both_species_with_new_two_genomes/analysis_both_species_with_nem_genomes/script_for_juliette/new_go_output_from_deseqdrought_all/New_GO_analysis_6thMay2025//")
-
 ## First we checked shared response in both Arabis species to drought and recovery, 
 # so first we will look for the similar response in both species or stress response mechanisms
 # in both species together.
 ##### left universrse ##### A. nem and A. sag in drought
-
 allGenes_numeric <- ifelse((left_universe_sag_nem$log2FC_nem < 0 & left_universe_sag_nem$log2FC_sag < 0 ) & left_universe_sag_nem$color == "green", 0, 1) ## check for common enrichment in green genes.
 
 names(allGenes_numeric) <- left_universe_sag_nem$At
@@ -1016,12 +1090,169 @@ tGOdata_sag_nem_left_wilt_ctrl <- new("topGOdata",
 results.fisher_sag_nem_left_wilt_ctrl <- runTest(tGOdata_sag_nem_left_wilt_ctrl, algorithm="elim", statistic="fisher")
 
 goEnrichmentQ_shared_sag_nem_left_wilt_ctrl <- GenTable(tGOdata_sag_nem_left_wilt_ctrl, fisher=results.fisher_sag_nem_left_wilt_ctrl, orderBy="fisher", topNodes=50)
-write.csv(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl, "goEnrichmentQ_shared_sag_nem_left_wilt_ctrl.csv")
+
+
+# Convert p-values to numeric (handling "<1e-30" etc.)
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher <- suppressWarnings(as.numeric(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher))
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher[is.na(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher)] <- 1e-30  # Replace NAs with small value
+
+# Add -log10 p-value for color gradient
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$log10_p <- -log10(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher)
+
+# Optional: reorder GO terms by significance
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$Term <- factor(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$Term, levels = rev(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$Term))
+
+
+ggplot(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl, aes(x = as.numeric(Significant), 
+                             y = Term,
+                             fill = log10_p)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "lightblue", high = "red", name = "-log10(p)") +
+  labs(x = "Number of Significant Genes in table_shared_sag_nem_left_wilt_ctrl",
+       y = "GO Term",
+       title = "GO Enrichment (elimFisher)") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10),
+        plot.title = element_text(size = 14, face = "bold"))
+
+
+#write.csv(go_table_NC_DOWN, "DEG_groups/go_table_NC_DOWN.csv")
+
+# Get gene IDs for enriched GO terms
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_ID <- goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$GO.ID
+
+# Get significant genes per GO term
+# Corwiltted function
+getSigGenesFromGO <- function(GOterm, GOdata) {
+  all_genes <- genesInTerm(GOdata)[[GOterm]]
+  sig_genes <- all_genes[all_genes %in% sigGenes(GOdata)]
+  return(sig_genes)
+}
+
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes <- lapply(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_ID, getSigGenesFromGO, GOdata = tGOdata_sag_nem_left_wilt_ctrl)
+names(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes) <- goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_ID
+
+# Flatten to a data frame
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes_df <- stack(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes)
+colnames(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes_df) <- c("GeneID", "GO.ID")
+
+# Save
+#write.csv(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes_df, "goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes.csv", row.names = FALSE)
+
+
+# Collapse all gene IDs per GO term into a single string
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes_lists_by_go <- goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes_df %>%
+  group_by(GO.ID) %>%
+  summarise(GeneList = paste(GeneID, collapse = ", "), .groups = "drop")
+
+
+# Merge gene list into the main GO table by GO.ID
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_annotated <- left_join(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl, goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes_lists_by_go, by = "GO.ID")
+
+
+#write.csv(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_annotated, "goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_genes_annotated.csv", row.names = FALSE)
+
+#write.csv(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl, "goEnrichmentQ_shared_sag_nem_left_wilt_ctrl.csv")
 
 
 
+####################
+# -------------------------------
+# 1. GO enrichment table (already created)
+# -------------------------------
+
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl <- GenTable(
+  tGOdata_sag_nem_left_wilt_ctrl,
+  fisher = results.fisher_sag_nem_left_wilt_ctrl,
+  orderBy = "fisher",
+  topNodes = 50
+)
+
+# Convert p-values to numeric
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher <- suppressWarnings(
+  as.numeric(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher)
+)
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher[is.na(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher)] <- 1e-30
+
+# Add -log10 p-value
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$log10_p <-
+  -log10(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$fisher)
+
+# -------------------------------
+# 2. Function to extract annotated & significant genes
+# -------------------------------
+
+getGenesFromGO <- function(GOterm, GOdata) {
+  
+  annotated_genes <- genesInTerm(GOdata)[[GOterm]]
+  significant_genes <- intersect(annotated_genes, sigGenes(GOdata))
+  
+  tibble(
+    GO.ID = GOterm,
+    AnnotatedGenes = paste(annotated_genes, collapse = ", "),
+    SignificantGenes = paste(significant_genes, collapse = ", "),
+    n_annotated = length(annotated_genes),
+    n_significant = length(significant_genes)
+  )
+}
+
+# -------------------------------
+# 3. Apply function to all enriched GO terms
+# -------------------------------
+
+go_ids <- goEnrichmentQ_shared_sag_nem_left_wilt_ctrl$GO.ID
+
+genes_per_go <- bind_rows(
+  lapply(go_ids, getGenesFromGO, GOdata = tGOdata_sag_nem_left_wilt_ctrl)
+)
+
+# -------------------------------
+# 4. Merge gene lists back into GO table
+# -------------------------------
+
+goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_annotated1 <- left_join(
+  goEnrichmentQ_shared_sag_nem_left_wilt_ctrl,
+  genes_per_go,
+  by = "GO.ID"
+)
+
+# -------------------------------
+# 5. Optional: long-format gene table (one gene per row)
+# -------------------------------
+
+#getGenesLong <- function(GOterm, GOdata) {
+#  
+#  annotated_genes <- genesInTerm(GOdata)[[GOterm]]
+#  significant_genes <- intersect(annotated_genes, sigGenes(GOdata))
+  
+#  tibble(
+#    GO.ID = GOterm,
+#    GeneID = annotated_genes,
+#    IsSignificant = annotated_genes %in% significant_genes
+#  )
+#}
+
+#go_genes_long <- bind_rows(
+#  lapply(go_ids, getGenesLong, GOdata = tGOdata_sag_nem_left_wilt_ctrl)
+#)
+
+# -------------------------------
+# 6. Save results (optional)
+# -------------------------------
+
+# write.csv(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_annotated1,
+#           "goEnrichmentQ_shared_sag_nem_left_wilt_ctrl_annotated_and_significant.csv",
+#           row.names = FALSE)
+
+# write.csv(go_genes_long,
+#           "GO_annotated_genes_long_format.csv",
+#           row.names = FALSE)
+
+###################
+
+
+######################################
 ##### right universrse ##### A. nem and A. sag in drought
-
 allGenes_numeric <- ifelse((right_universe_sag_nem$log2FC_nem > 0 & right_universe_sag_nem$log2FC_sag > 0 ) & right_universe_sag_nem$color == "green", 0, 1) ## check for common enrichment in green genes.
 
 names(allGenes_numeric) <- right_universe_sag_nem$At
@@ -1044,11 +1275,167 @@ tGOdata_sag_nem_right_wilt_ctrl <- new("topGOdata",
 # enrichment test KS (KS test targets specific and significant enrichment)
 results.fisher_sag_nem_right_wilt_ctrl <- runTest(tGOdata_sag_nem_right_wilt_ctrl, algorithm="elim", statistic="fisher")
 
-goEnrichmentQ_shared_sag_nem_right_wilt_ctrl <- GenTable(tGOdata_sag_nem_right_wilt_ctrl, fisher=results.fisher_sag_nem_right_wilt_ctrl, orderBy="fisher", topNodes=50)
-write.csv(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl, "goEnrichmentQ_shared_sag_nem_right_wilt_ctrl.csv")
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl <- GenTable(tGOdata_sag_nem_right_wilt_ctrl, fisher=results.fisher_sag_nem_right_wilt_ctrl, orderBy="fisher", topNodes=20)
+
+#write.csv(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl, "goEnrichmentQ_shared_sag_nem_right_wilt_ctrl.csv")
+
+# Convert p-values to numeric (handling "<1e-30" etc.)
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher <- suppressWarnings(as.numeric(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher))
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher[is.na(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher)] <- 1e-30  # Replace NAs with small value
+
+# Add -log10 p-value for color gradient
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$log10_p <- -log10(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher)
+
+# Optional: reorder GO terms by significance
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$Term <- factor(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$Term, levels = rev(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$Term))
 
 
+ggplot(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl, aes(x = as.numeric(Significant), 
+                             y = Term,
+                             fill = log10_p)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "lightblue", high = "red", name = "-log10(p)") +
+  labs(x = "Number of Significant Genes in table_shared_sag_nem_right_wilt_ctrl",
+       y = "GO Term",
+       title = "GO Enrichment (elimFisher)") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10),
+        plot.title = element_text(size = 14, face = "bold"))
 
+
+#write.csv(go_table_NC_DOWN, "DEG_groups/go_table_NC_DOWN.csv")
+
+
+# Get gene IDs for enriched GO terms
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_ID <- goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$GO.ID
+
+# Get significant genes per GO term
+# Corwiltted function
+getSigGenesFromGO <- function(GOterm, GOdata) {
+  all_genes <- genesInTerm(GOdata)[[GOterm]]
+  sig_genes <- all_genes[all_genes %in% sigGenes(GOdata)]
+  return(sig_genes)
+}
+
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes <- lapply(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_ID, getSigGenesFromGO, GOdata = tGOdata_sag_nem_right_wilt_ctrl)
+names(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes) <- goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_ID
+
+# Flatten to a data frame
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes_df <- stack(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes)
+colnames(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes_df) <- c("GeneID", "GO.ID")
+
+# Save
+#write.csv(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes_df, "goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes.csv", row.names = FALSE)
+
+
+# Collapse all gene IDs per GO term into a single string
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes_lists_by_go <- goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes_df %>%
+  group_by(GO.ID) %>%
+  summarise(GeneList = paste(GeneID, collapse = ", "), .groups = "drop")
+
+
+# Merge gene list into the main GO table by GO.ID
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_annotated <- left_join(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl, goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes_lists_by_go, by = "GO.ID")
+
+
+#write.csv(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_annotated, "goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_genes_annotated.csv", row.names = FALSE)
+
+
+####################
+# -------------------------------
+# 1. GO enrichment table (already created)
+# -------------------------------
+
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl <- GenTable(
+  tGOdata_sag_nem_right_wilt_ctrl,
+  fisher = results.fisher_sag_nem_right_wilt_ctrl,
+  orderBy = "fisher",
+  topNodes = 50
+)
+
+# Convert p-values to numeric
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher <- suppressWarnings(
+  as.numeric(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher)
+)
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher[is.na(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher)] <- 1e-30
+
+# Add -log10 p-value
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$log10_p <-
+  -log10(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$fisher)
+
+# -------------------------------
+# 2. Function to extract annotated & significant genes
+# -------------------------------
+
+getGenesFromGO <- function(GOterm, GOdata) {
+  
+  annotated_genes <- genesInTerm(GOdata)[[GOterm]]
+  significant_genes <- intersect(annotated_genes, sigGenes(GOdata))
+  
+  tibble(
+    GO.ID = GOterm,
+    AnnotatedGenes = paste(annotated_genes, collapse = ", "),
+    SignificantGenes = paste(significant_genes, collapse = ", "),
+    n_annotated = length(annotated_genes),
+    n_significant = length(significant_genes)
+  )
+}
+
+# -------------------------------
+# 3. Apply function to all enriched GO terms
+# -------------------------------
+
+go_ids <- goEnrichmentQ_shared_sag_nem_right_wilt_ctrl$GO.ID
+
+genes_per_go <- bind_rows(
+  lapply(go_ids, getGenesFromGO, GOdata = tGOdata_sag_nem_right_wilt_ctrl)
+)
+
+# -------------------------------
+# 4. Merge gene lists back into GO table
+# -------------------------------
+
+goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_annotated1 <- left_join(
+  goEnrichmentQ_shared_sag_nem_right_wilt_ctrl,
+  genes_per_go,
+  by = "GO.ID"
+)
+
+# -------------------------------
+# 5. Optional: long-format gene table (one gene per row)
+# -------------------------------
+
+#getGenesLong <- function(GOterm, GOdata) {
+#  
+#  annotated_genes <- genesInTerm(GOdata)[[GOterm]]
+#  significant_genes <- intersect(annotated_genes, sigGenes(GOdata))
+
+#  tibble(
+#    GO.ID = GOterm,
+#    GeneID = annotated_genes,
+#    IsSignificant = annotated_genes %in% significant_genes
+#  )
+#}
+
+#go_genes_long <- bind_rows(
+#  lapply(go_ids, getGenesLong, GOdata = tGOdata_sag_nem_left_wilt_ctrl)
+#)
+
+# -------------------------------
+# 6. Save results (optional)
+# -------------------------------
+
+# write.csv(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_annotated1,
+#            "goEnrichmentQ_shared_sag_nem_right_wilt_ctrl_annotated_and_significant.csv",
+#            row.names = FALSE)
+
+# write.csv(go_genes_long,
+#           "GO_annotated_genes_long_format.csv",
+#           row.names = FALSE)
+
+###################
+
+######################################
 ##### A. sag and A. nem (stress)
 ##### left universrse
 # for down regulated in sag use Q7, for more down in sag use Q4, in nem use Q4, more down in nem use Q7)
@@ -1074,6 +1461,8 @@ tGOdata2 <- new("topGOdata",
 results.fisher2 <- runTest(tGOdata2, algorithm="elim", statistic="fisher")
 goEnrichmentQ_sag_up_against_nem_wiltQ2 <- GenTable(tGOdata2, KS=results.fisher2, orderBy="KS", topNodes=50)
 
+
+##################################
 # for down regulated in sag use Q7, for more down in sag use Q4, in nem use Q4, more down in nem use Q7)
 allGenes_numeric <- ifelse((left_universe_sag_nem$quadrant == "Q4") & left_universe_sag_nem$color == "red", 0, 1)
 names(allGenes_numeric) <- left_universe_sag_nem$At
@@ -1098,6 +1487,7 @@ results.fisher4 <- runTest(tGOdata4, algorithm="elim", statistic="fisher")
 goEnrichmentQ_sag_down_more_against_nem_wiltQ4 <- GenTable(tGOdata4, KS=results.fisher4, orderBy="KS", topNodes=50)
 
 
+######################################
 # for down regulated in sag use Q7, for more down in sag use Q4, in nem use Q4, more down in nem use Q7)
 allGenes_numeric <- ifelse((left_universe_sag_nem$quadrant == "Q7") & left_universe_sag_nem$color == "red", 0, 1)
 names(allGenes_numeric) <- left_universe_sag_nem$At
@@ -1123,7 +1513,6 @@ results.fisher7 <- runTest(tGOdata7, algorithm="elim", statistic="fisher")
 
 
 ###### right universe
-
 # for up regulated in nem use Q5, for more up in sag use Q1, more up in nem use Q8)
 allGenes_numeric <- ifelse((right_universe_sag_nem$quadrant == "Q1") & right_universe_sag_nem$color == "red", 0, 1)
 names(allGenes_numeric) <- right_universe_sag_nem$At
@@ -1203,12 +1592,12 @@ goEnrichmentQ_nem_up_and_sag_down_wiltQ5 <- GenTable(tGOdata5, fisher=results.fi
 goEnrichmentQ_nem_down_more_against_sag_wiltQ7 <- GenTable(tGOdata7, fisher=results.fisher7, orderBy="fisher", topNodes=50)
 
 
-write.csv(goEnrichmentQ_sag_up_more_against_nem_wiltQ1, "goEnrichmentQ_sag_up_more_against_nem_wiltQ1.csv")
-write.csv(goEnrichmentQ_sag_down_more_against_nem_wiltQ4, "goEnrichmentQ_sag_down_more_against_nem_wiltQ4.csv")
-write.csv(goEnrichmentQ_sag_up_and_nem_down_wiltQ2, "goEnrichmentQ_sag_up_and_nem_down_wiltQ2.csv")
-write.csv(goEnrichmentQ_nem_up_more_against_sag_wiltQ8, "goEnrichmentQ_nem_up_more_against_sag_wiltQ8.csv")
-write.csv(goEnrichmentQ_nem_up_and_sag_down_wiltQ5, "goEnrichmentQ_nem_up_and_sag_down_wiltQ5.csv")
-write.csv(goEnrichmentQ_nem_down_more_against_sag_wiltQ7, "goEnrichmentQ_nem_down_more_against_sag_wiltQ7.csv")
+#write.csv(goEnrichmentQ_sag_up_more_against_nem_wiltQ1, "goEnrichmentQ_sag_up_more_against_nem_wiltQ1.csv")
+#write.csv(goEnrichmentQ_sag_down_more_against_nem_wiltQ4, "goEnrichmentQ_sag_down_more_against_nem_wiltQ4.csv")
+#write.csv(goEnrichmentQ_sag_up_and_nem_down_wiltQ2, "goEnrichmentQ_sag_up_and_nem_down_wiltQ2.csv")
+#write.csv(goEnrichmentQ_nem_up_more_against_sag_wiltQ8, "goEnrichmentQ_nem_up_more_against_sag_wiltQ8.csv")
+#write.csv(goEnrichmentQ_nem_up_and_sag_down_wiltQ5, "goEnrichmentQ_nem_up_and_sag_down_wiltQ5.csv")
+#write.csv(goEnrichmentQ_nem_down_more_against_sag_wiltQ7, "goEnrichmentQ_nem_down_more_against_sag_wiltQ7.csv")
 
 ###################################################
 ###################################################
@@ -1242,7 +1631,7 @@ tGOdata_sag_nem_left_surv_ctrl <- new("topGOdata",
 results.fisher_sag_nem_left_surv_ctrl <- runTest(tGOdata_sag_nem_left_surv_ctrl, algorithm="elim", statistic="fisher")
 
 goEnrichmentQ_shared_sag_nem_left_surv_ctrl <- GenTable(tGOdata_sag_nem_left_surv_ctrl, fisher=results.fisher_sag_nem_left_surv_ctrl, orderBy="fisher", topNodes=50)
-write.csv(goEnrichmentQ_shared_sag_nem_left_surv_ctrl, "goEnrichmentQ_shared_sag_nem_left_surv_ctrl.csv")
+#write.csv(goEnrichmentQ_shared_sag_nem_left_surv_ctrl, "goEnrichmentQ_shared_sag_nem_left_surv_ctrl.csv")
 
 
 
@@ -1271,7 +1660,7 @@ tGOdata_sag_nem_right_surv_ctrl <- new("topGOdata",
 results.fisher_sag_nem_right_surv_ctrl <- runTest(tGOdata_sag_nem_right_surv_ctrl, algorithm="elim", statistic="fisher")
 
 goEnrichmentQ_shared_sag_nem_right_surv_ctrl <- GenTable(tGOdata_sag_nem_right_surv_ctrl, fisher=results.fisher_sag_nem_right_surv_ctrl, orderBy="fisher", topNodes=50)
-write.csv(goEnrichmentQ_shared_sag_nem_right_surv_ctrl, "goEnrichmentQ_shared_sag_nem_right_surv_ctrl.csv")
+#write.csv(goEnrichmentQ_shared_sag_nem_right_surv_ctrl, "goEnrichmentQ_shared_sag_nem_right_surv_ctrl.csv")
 
 
 ##### left universrse
@@ -1425,12 +1814,327 @@ goEnrichmentQ_nem_down_more_against_sag_rec_Q7 <- GenTable(tGOdata_rec7, fisher=
 goEnrichmentQ_nem_up_more_against_sag_rec_Q8 <- GenTable(tGOdata_rec8, fisher=results.fisher8, orderBy="fisher", topNodes=50)
 
 
-write.csv(goEnrichmentQ_sag_up_more_against_nem_rec_Q1, "goEnrichmentQ_sag_up_more_against_nem_recQ1.csv")
-write.csv(goEnrichmentQ_sag_down_more_against_nem_rec_Q4, "goEnrichmentQ_sag_down_more_against_nem_recQ4.csv")
-write.csv(goEnrichmentQ_sag_up_and_nem_down_rec_Q2, "goEnrichmentQ_sag_up_and_nem_down_rec_Q2.csv")
-write.csv(goEnrichmentQ_nem_up_and_sag_down_rec_Q5, "goEnrichmentQ_nem_up_and_sag_down_rec_Q5.csv")
-write.csv(goEnrichmentQ_nem_down_more_against_sag_rec_Q7, "goEnrichmentQ_nem_down_more_against_sag_rec_Q7.csv")
-write.csv(goEnrichmentQ_nem_up_more_against_sag_rec_Q8, "goEnrichmentQ_nem_up_more_against_sag_rec_Q8.csv")
+#write.csv(goEnrichmentQ_sag_up_more_against_nem_rec_Q1, "goEnrichmentQ_sag_up_more_against_nem_recQ1.csv")
+#write.csv(goEnrichmentQ_sag_down_more_against_nem_rec_Q4, "goEnrichmentQ_sag_down_more_against_nem_recQ4.csv")
+#write.csv(goEnrichmentQ_sag_up_and_nem_down_rec_Q2, "goEnrichmentQ_sag_up_and_nem_down_rec_Q2.csv")
+#write.csv(goEnrichmentQ_nem_up_and_sag_down_rec_Q5, "goEnrichmentQ_nem_up_and_sag_down_rec_Q5.csv")
+#write.csv(goEnrichmentQ_nem_down_more_against_sag_rec_Q7, "goEnrichmentQ_nem_down_more_against_sag_rec_Q7.csv")
+#write.csv(goEnrichmentQ_nem_up_more_against_sag_rec_Q8, "goEnrichmentQ_nem_up_more_against_sag_rec_Q8.csv")
+
+
+
+###############################################################
+###############################################################
+#########################################################-------------
+########## GO Recovery and Stress
+#Import the orthologues CSV file
+# ========================== STEP 1: Load Data ==========================
+orthologues <- read.csv("/Users/Shared/Files From d.localized/PhD-Uni-Koeln_2021-2024/PhD_work/seeds data/2nd Experiment 2022/transcriptome/Arabis_RNA_raw_data/90-774066047/anaylsis_drought_mRNA_both_species_with_new_two_genomes/analysis_both_species_with_nem_genomes/orthologues_cleaned.csv", header = TRUE)
+new_dataframe1 <- data.frame(orthologues)
+
+# Merge expression data with orthologue mapping
+combined_species_df_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  left_join(new_dataframe1, by = c("gene_id" = "arabis_cleaned"))
+
+write.csv(combined_species_df_sag_nem_surv_wilt, "combined_species_df_sag_nem_surv_wilt_with_ortho.csv")
+
+
+# Remove genes without an orthologue
+combined_species_df_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(!is.na(At))
+
+
+# Merge expression data with orthologue mapping
+#combined_species_df_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+#  left_join(new_dataframe1, by = c("gene_id" = "arabis_cleaned"))
+
+# Fix column names like At.x, At.x.x, At.y etc.
+colnames(combined_species_df_sag_nem_surv_wilt) <- gsub("\\.x+|\\.y+", "", colnames(combined_species_df_sag_nem_surv_wilt))
+
+combined_species_df_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt[ , !grepl("^At\\.\\d+$", colnames(combined_species_df_sag_nem_surv_wilt))]
+
+colnames(combined_species_df_sag_nem_surv_wilt) <- make.unique(colnames(combined_species_df_sag_nem_surv_wilt))
+
+# Remove genes without an orthologue
+#combined_species_df_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+#  filter(!is.na(At))
+
+# ========================== STEP 2: Define Universes ==========================
+### split on diagonal
+##### A. sag and A. nem (stress)
+# Genes ABOVE the diagonal
+upper_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_sag > log2FC_nem) 
+
+# Genes BELOW the diagonal
+lower_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_sag < log2FC_nem)
+
+##### A. sag and A. nem (recovery)
+# Genes ABOVE the diagonal
+upper_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_sag > log2FC_nem) 
+
+# Genes BELOW the diagonal
+lower_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_sag < log2FC_nem)
+
+##### split on vertical line
+##### A. sag and A. nem (stress)
+# Genes Left the vline
+left_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_nem < 0) 
+
+# Genes right the vline
+right_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_nem > 0)
+
+##### A. sag and A. nem (recovery)
+# Genes ABOVE the diagonal
+left_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_nem < 0) 
+
+# Genes BELOW the diagonal
+right_universe_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+  filter(log2FC_nem > 0)
+
+
+write.csv(left_universe_sag_nem_surv_wilt, "left_universe_sag_nem_recovery_wilt.csv")
+
+write.csv(right_universe_sag_nem_surv_wilt, "right_universe_sag_nem_recovery_wilt.csv")
+
+# ========================== STEP 3: Perform GO Enrichments ==========================
+setwd("/Users/Shared/Files From d.localized/PhD-Uni-Koeln_2021-2024/PhD_work/seeds data/2nd Experiment 2022/transcriptome/Arabis_RNA_raw_data/90-774066047/anaylsis_drought_mRNA_both_species_with_new_two_genomes/analysis_both_species_with_nem_genomes/script_for_juliette/new_go_output_from_deseqdrought_all/New_GO_analysis_6thMay2025//")
+
+## First we checked shared response in both Arabis species to drought and recovery, 
+# so first we will look for the similar response in both species or stress response mechanisms
+# in both species together.
+##### left universrse ##### A. nem and A. sag in drought
+allGenes_numeric <- ifelse((left_universe_sag_nem_surv_wilt$log2FC_nem < 0 & left_universe_sag_nem_surv_wilt$log2FC_sag < 0 ) & left_universe_sag_nem_surv_wilt$color == "green", 0, 1) ## check for common enrichment in green genes.
+
+names(allGenes_numeric) <- left_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO data object
+tGOdata_sag_nem_left_surv_wilt <- new("topGOdata",
+                                      description = "Enrichment Analysis for Q1",
+                                      ontology = "BP",  
+                                      allGenes = allGenes_numeric,
+                                      geneSel = function(x) x == 0,  # This marks genes of interest (green in Q1) as TRUE
+                                      nodeSize = 5,  # Minimum number of genes for a GO term to be considered
+                                      mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                                      annot = annFUN.org)
+
+# enrichment test KS (KS test targets specific and significant enrichment)
+results.fisher_sag_nem_left_surv_wilt <- runTest(tGOdata_sag_nem_left_surv_wilt, algorithm="elim", statistic="fisher")
+
+goEnrichmentQ_shared_sag_nem_left_surv_wilt <- GenTable(tGOdata_sag_nem_left_surv_wilt, fisher=results.fisher_sag_nem_left_surv_wilt, orderBy="fisher", topNodes=50)
+
+#write.csv(goEnrichmentQ_shared_sag_nem_left_wilt_ctrl, "goEnrichmentQ_shared_sag_nem_left_wilt_ctrl.csv")
+
+
+
+##### right universrse ##### A. nem and A. sag in drought
+
+allGenes_numeric <- ifelse((right_universe_sag_nem_surv_wilt$log2FC_nem > 0 & right_universe_sag_nem_surv_wilt$log2FC_sag > 0 ) & right_universe_sag_nem$color == "green", 0, 1) ## check for common enrichment in green genes.
+
+names(allGenes_numeric) <- right_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO data object
+tGOdata_sag_nem_right_wilt_ctrl <- new("topGOdata",
+                                       description = "Enrichment Analysis for Q1",
+                                       ontology = "BP",  
+                                       allGenes = allGenes_numeric,
+                                       geneSel = function(x) x == 0,  # This marks genes of interest (green in Q1) as TRUE
+                                       nodeSize = 5,  # Minimum number of genes for a GO term to be considered
+                                       mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                                       annot = annFUN.org)
+
+# enrichment test KS (KS test targets specific and significant enrichment)
+results.fisher_sag_nem_right_surv_wilt <- runTest(tGOdata_sag_nem_right_surv_wilt, algorithm="elim", statistic="fisher")
+
+goEnrichmentQ_shared_sag_nem_right_surv_wilt <- GenTable(tGOdata_sag_nem_right_surv_wilt, fisher=results.fisher_sag_nem_right_wilt_ctrl, orderBy="fisher", topNodes=50)
+#write.csv(goEnrichmentQ_shared_sag_nem_right_wilt_ctrl, "goEnrichmentQ_shared_sag_nem_right_wilt_ctrl.csv")
+
+
+
+##### A. sag and A. nem (Recov and stress)
+##### left universrse
+# for down regulated in sag use Q7, for more down in sag use Q4, in nem use Q4, more down in nem use Q7)
+allGenes_numeric <- ifelse((left_universe_sag_nem_surv_wilt$quadrant == "Q2") & left_universe_sag_nem_surv_wilt$color == "red", 0, 1)
+names(allGenes_numeric) <- left_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO2 data object
+tGOdata2 <- new("topGOdata",
+                description = "Enrichment Analysis for Q2",
+                ontology = "BP",  
+                allGenes = allGenes_numeric,
+                geneSel = function(x) x == 0,  # This marks genes of interest (red in Q1) as TRUE
+                nodeSize = 10,  # Minimum number of genes for a GO term to be considered
+                mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                annot = annFUN.org)
+
+# enrichment test KS (KS test targets specific and significant enrichment)
+results.fisher2 <- runTest(tGOdata2, algorithm="elim", statistic="fisher")
+goEnrichmentQ_sag_up_against_nem_surv_wiltQ2 <- GenTable(tGOdata2, KS=results.fisher2, orderBy="KS", topNodes=50)
+
+
+# for down regulated in sag use Q7, for more down in sag use Q4, in nem use Q4, more down in nem use Q7)
+allGenes_numeric <- ifelse((left_universe_sag_nem_surv_wilt$quadrant == "Q4") & left_universe_sag_nem_surv_wilt$color == "red", 0, 1)
+names(allGenes_numeric) <- left_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO4 data object
+tGOdata4 <- new("topGOdata",
+                description = "Enrichment Analysis for Q4",
+                ontology = "BP",  
+                allGenes = allGenes_numeric,
+                geneSel = function(x) x == 0,  # This marks genes of interest (red in Q1) as TRUE
+                nodeSize = 10,  # Minimum number of genes for a GO term to be considered
+                mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                annot = annFUN.org)
+
+# enrichment test KS (KS test targets specific and significant enrichment)
+results.fisher4 <- runTest(tGOdata4, algorithm="elim", statistic="fisher")
+goEnrichmentQ_sag_down_more_against_nem_surv_wiltQ4 <- GenTable(tGOdata4, KS=results.fisher4, orderBy="KS", topNodes=50)
+
+
+# for down regulated in sag use Q7, for more down in sag use Q4, in nem use Q4, more down in nem use Q7)
+allGenes_numeric <- ifelse((left_universe_sag_nem_surv_wilt$quadrant == "Q7") & left_universe_sag_nem_surv_wilt$color == "red", 0, 1)
+names(allGenes_numeric) <- left_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO7 data object
+tGOdata7 <- new("topGOdata",
+                description = "Enrichment Analysis for Q7",
+                ontology = "BP",  
+                allGenes = allGenes_numeric,
+                geneSel = function(x) x == 0,  # This marks genes of interest (red in Q1) as TRUE
+                nodeSize = 10,  # Minimum number of genes for a GO term to be considered
+                mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                annot = annFUN.org)
+
+# enrichment test KS (KS test targets specific and significant enrichment)
+results.fisher7 <- runTest(tGOdata7, algorithm="elim", statistic="fisher")
+
+goEnrichmentQ_sag_down_more_against_nem_surv_wiltQ7 <- GenTable(tGOdata7, KS=results.fisher7, orderBy="KS", topNodes=50)
+
+###### right universe
+
+# for up regulated in nem use Q5, for more up in sag use Q1, more up in nem use Q8)
+allGenes_numeric <- ifelse((right_universe_sag_nem_surv_wilt$quadrant == "Q1") & right_universe_sag_nem_surv_wilt$color == "red", 0, 1)
+names(allGenes_numeric) <- right_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO2 data object
+tGOdata1 <- new("topGOdata",
+                description = "Enrichment Analysis for Q1",
+                ontology = "BP",  
+                allGenes = allGenes_numeric,
+                geneSel = function(x) x == 0,  # This marks genes of interest (red in Q1) as TRUE
+                nodeSize = 10,  # Minimum number of genes for a GO term to be considered
+                mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                annot = annFUN.org)
+
+# enrichment test KS (KS test targets specific and significant enrichment)
+results.fisher1 <- runTest(tGOdata1, algorithm="elim", statistic="fisher")
+
+goEnrichmentQ_sag_up_more_against_nem_surv_wiltQ1 <- GenTable(tGOdata1, fisher=results.fisher1, orderBy="fisher", topNodes=50)
+
+
+# for up regulated in nem use Q5, for more up in sag use Q1, more up in nem use Q8)
+allGenes_numeric <- ifelse((right_universe_sag_nem_surv_wilt$quadrant == "Q5") & right_universe_sag_nem_surv_wilt$color == "red", 0, 1)
+names(allGenes_numeric) <- right_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO4 data object
+tGOdata5 <- new("topGOdata",
+                description = "Enrichment Analysis for Q5",
+                ontology = "BP",  
+                allGenes = allGenes_numeric,
+                geneSel = function(x) x == 0,  # This marks genes of interest (red in Q1) as TRUE
+                nodeSize = 10,  # Minimum number of genes for a GO term to be considered
+                mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                annot = annFUN.org)
+
+# enrichment test KS (KS test targets specific and significant enrichment)
+results.fisher5 <- runTest(tGOdata5, algorithm="elim", statistic="fisher")
+
+goEnrichmentQ_sag_up_more_against_nem_surv_wiltQ5 <- GenTable(tGOdata5, fisher=results.fisher5, orderBy="fisher", topNodes=50)
+
+
+
+# for up regulated in nem use Q5, for more up in sag use Q1, more up in nem use Q8)
+allGenes_numeric <- ifelse((right_universe_sag_nem_surv_wilt$quadrant == "Q8") & right_universe_sag_nem_surv_wilt$color == "red", 0, 1)
+names(allGenes_numeric) <- right_universe_sag_nem_surv_wilt$At
+
+# Remove NA values if necessary
+allGenes_numeric <- allGenes_numeric[!is.na(allGenes_numeric)]
+
+head(allGenes_numeric)
+
+# Create topGO7 data object
+tGOdata8 <- new("topGOdata",
+                description = "Enrichment Analysis for Q8",
+                ontology = "BP",  
+                allGenes = allGenes_numeric,
+                geneSel = function(x) x == 0,  # This marks genes of interest (red in Q1) as TRUE
+                nodeSize = 10,  # Minimum number of genes for a GO term to be considered
+                mapping = "org.At.tair.db",  # database for Arabidopsis thaliana
+                annot = annFUN.org)
+
+# enrichment test KS (KS / fisher test targets specific and significant enrichment)
+results.fisher8 <- runTest(tGOdata8, algorithm="elim", statistic="fisher")
+goEnrichmentQ_sag_up_more_against_nem_surv_wiltQ8 <- GenTable(tGOdata8, fisher=results.fisher8, orderBy="fisher", topNodes=50)
+
+
+
+
+goEnrichmentQ_sag_up_more_against_nem_surv_wiltQ1 <- GenTable(tGOdata1, fisher=results.fisher1, orderBy="fisher", topNodes=50)
+goEnrichmentQ_sag_down_more_against_nem_surv_wiltQ4 <- GenTable(tGOdata4, fisher=results.fisher4, orderBy="fisher", topNodes=50)
+goEnrichmentQ_sag_up_and_nem_down_surv_wiltQ2 <- GenTable(tGOdata2, fisher=results.fisher2, orderBy="fisher", topNodes=50)
+goEnrichmentQ_nem_up_more_against_surv_sag_wiltQ8 <- GenTable(tGOdata8, fisher=results.fisher8, orderBy="fisher", topNodes=50)
+goEnrichmentQ_nem_up_and_sag_down_surv_wiltQ5 <- GenTable(tGOdata5, fisher=results.fisher5, orderBy="fisher", topNodes=50)
+goEnrichmentQ_nem_down_more_against_sag_surv_wiltQ7 <- GenTable(tGOdata7, fisher=results.fisher7, orderBy="fisher", topNodes=50)
+
+
+#write.csv(goEnrichmentQ_sag_up_more_against_nem_surv_wiltQ1, "goEnrichmentQ_sag_up_more_against_nem_surv_wiltQ1.csv")
+#write.csv(goEnrichmentQ_sag_down_more_against_nem_surv_wiltQ4, "goEnrichmentQ_sag_down_more_against_nem_surv_wiltQ4.csv")
+#write.csv(goEnrichmentQ_sag_up_and_nem_down_surv_wiltQ2, "goEnrichmentQ_sag_up_and_nem_down_surv_wiltQ2.csv")
+#write.csv(goEnrichmentQ_nem_up_more_against_surv_sag_wiltQ8, "goEnrichmentQ_nem_up_more_against_surv_sag_wiltQ8.csv")
+#write.csv(goEnrichmentQ_nem_up_and_sag_down_surv_wiltQ5, "goEnrichmentQ_nem_up_and_sag_down_surv_wiltQ5.csv")
+#write.csv(goEnrichmentQ_nem_down_more_against_sag_surv_wiltQ7, "goEnrichmentQ_nem_down_more_against_sag_surv_wiltQ7.csv")
+
 
 ################################################################
 ################################################################
@@ -1722,3 +2426,1258 @@ write.csv(goEnrichmentQ_nem_up_more_against_sag_recQ8_genes_df, "goEnrichmentQ_n
 
 
 ########################################## End here on 11th July 2025 ################################################
+########################################## End here on 11th July 2025 ################################################
+########################################## End here on 11th July 2025 ################################################
+########################################## End here on 11th July 2025 ################################################
+########################################## End here on 11th July 2025 ################################################
+
+
+##### starting 6th January 2026, here is the new analysis #######
+##### A. nem and A. sag in drought vs control --- shared response in up-up regulation
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "green" & combined_species_df_sag_nem_df$quadrant %in% c("Q1", "Q8")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q1 or Q8",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_sag_nem_upup_df <- GenTable(tGOdata_sag_nem_df,
+                                    fisher = result_fisher_sag_nem_df,
+                                    orderBy = "fisher",
+                                    topNodes = 20)
+
+goTable_sag_nem_upup_df
+
+write.csv(goTable_sag_nem_upup_df, "goTable_sag_nem_upup_df.csv")
+
+
+##### A. nem and A. sag in drought vs control --- shared response in down-down regulation
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "green" & combined_species_df_sag_nem_df$quadrant %in% c("Q7", "Q4")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q7 or Q4",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_sag_nem_downdown_df <- GenTable(tGOdata_sag_nem_df,
+                                        fisher = result_fisher_sag_nem_df,
+                                        orderBy = "fisher",
+                                        topNodes = 20)
+
+goTable_sag_nem_downdown_df
+
+write.csv(goTable_sag_nem_downdown_df, "goTable_sag_nem_downdown_df.csv")
+
+
+##### A. nem and A. sag in drought vs control --- response more up regulation in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "red" & combined_species_df_sag_nem_df$quadrant %in% c("Q1")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q1",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_stress_more_up_sag_df <- GenTable(tGOdata_sag_nem_df,
+                                          fisher = result_fisher_sag_nem_df,
+                                          orderBy = "fisher",
+                                          topNodes = 20)
+
+goTable_stress_more_up_sag_df
+
+
+##### A. nem and A. sag in drought vs control --- response more up regulation in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "red" & combined_species_df_sag_nem_df$quadrant %in% c("Q8")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q8",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_stress_more_up_nem_df <- GenTable(tGOdata_sag_nem_df,
+                                          fisher = result_fisher_sag_nem_df,
+                                          orderBy = "fisher",
+                                          topNodes = 20)
+
+goTable_stress_more_up_nem_df
+
+
+##### A. nem and A. sag in drought vs control --- response up regulation in A. sagittata, and down in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "red" & combined_species_df_sag_nem_df$quadrant %in% c("Q2")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q2",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_stress_up_sag_down_nem_df <- GenTable(tGOdata_sag_nem_df,
+                                              fisher = result_fisher_sag_nem_df,
+                                              orderBy = "fisher",
+                                              topNodes = 20)
+
+goTable_stress_up_sag_down_nem_df
+
+
+
+##### A. nem and A. sag in drought vs control --- response up regulation in A. nemorensis, and down in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "red" & combined_species_df_sag_nem_df$quadrant %in% c("Q5")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q2",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_stress_up_nem_down_sag_df <- GenTable(tGOdata_sag_nem_df,
+                                              fisher = result_fisher_sag_nem_df,
+                                              orderBy = "fisher",
+                                              topNodes = 20)
+
+goTable_stress_up_nem_down_sag_df
+
+
+
+##### A. nem and A. sag in drought vs control --- response more down regulation in A. nemorensis, and less down in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "red" & combined_species_df_sag_nem_df$quadrant %in% c("Q7")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q2",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_stress_more_down_nem_df <- GenTable(tGOdata_sag_nem_df,
+                                            fisher = result_fisher_sag_nem_df,
+                                            orderBy = "fisher",
+                                            topNodes = 20)
+
+goTable_stress_more_down_nem_df
+
+
+##### A. nem and A. sag in drought vs control --- response more down regulation in A. sagittata, and less down in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_df <- combined_species_df_sag_nem[!is.na(combined_species_df_sag_nem$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_df <- combined_species_df_sag_nem_df$color == "red" & combined_species_df_sag_nem_df$quadrant %in% c("Q4")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_df <- new("topGOdata",
+                          description = "Green genes in Q2",
+                          ontology = "BP",
+                          allGenes = allGenes_numeric,
+                          geneSel = function(x) x == 1,
+                          nodeSize = 5,
+                          mapping = "org.At.tair.db",
+                          annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_df <- runTest(tGOdata_sag_nem_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_stress_more_down_sag_df <- GenTable(tGOdata_sag_nem_df,
+                                            fisher = result_fisher_sag_nem_df,
+                                            orderBy = "fisher",
+                                            topNodes = 20)
+
+goTable_stress_more_down_sag_df
+
+
+
+
+write.csv(goTable_stress_up_nem_down_sag_df, "goTable_stress_up_nem_down_sag_df.csv")
+write.csv(goTable_stress_up_sag_down_nem_df,  "goTable_stress_up_sag_down_nem_df.csv")
+write.csv(goTable_stress_more_up_sag_df, "goTable_stress_more_up_sag_df.csv")
+write.csv(goTable_stress_more_up_nem_df, "goTable_stress_more_up_nem_df.csv")
+write.csv(goTable_stress_more_down_sag_df, "goTable_stress_more_down_sag_df.csv")
+write.csv(goTable_stress_more_down_sag_df, "goTable_stress_more_down_sag_df.csv")
+
+
+
+
+
+#######################################################
+##### A. nem and A. sag in recovery vs control --- shared response in up-up regulation
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "green" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q1", "Q8")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q1 or Q8",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_sag_nem_upup_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                             fisher = result_fisher_sag_nem_surv_df,
+                                             orderBy = "fisher",
+                                             topNodes = 20)
+
+goTable_recovery_sag_nem_upup_df
+
+
+##### A. nem and A. sag in recover vs control --- shared response in down-down regulation
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "green" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q7", "Q4")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q7 or Q4",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_sag_nem_downdown_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                                 fisher = result_fisher_sag_nem_surv_df,
+                                                 orderBy = "fisher",
+                                                 topNodes = 20)
+
+goTable_recovery_sag_nem_downdown_df
+
+
+
+##### A. nem and A. sag in recovery vs control --- response more up regulation in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "red" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q1")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q1",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_more_up_sag_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                            fisher = result_fisher_sag_nem_surv_df,
+                                            orderBy = "fisher",
+                                            topNodes = 20)
+
+goTable_recovery_more_up_sag_df
+
+
+##### A. nem and A. sag in recovery vs control --- response more up regulation in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "red" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q8")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q8",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_more_up_nem_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                            fisher = result_fisher_sag_nem_surv_df,
+                                            orderBy = "fisher",
+                                            topNodes = 20)
+
+goTable_recovery_more_up_nem_df
+
+
+##### A. nem and A. sag in recovery vs control --- response up regulation in A. sagittata, and down in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+#combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "red" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q2")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q2",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_up_sag_down_nem_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                                fisher = result_fisher_sag_nem_surv_df,
+                                                orderBy = "fisher",
+                                                topNodes = 20)
+
+goTable_recovery_up_sag_down_nem_df
+
+
+
+##### A. nem and A. sag in recovery vs control --- response up regulation in A. nemorensis, and down in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "red" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q5")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q2",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_up_nem_down_sag_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                                fisher = result_fisher_sag_nem_surv_df,
+                                                orderBy = "fisher",
+                                                topNodes = 20)
+
+goTable_recovery_up_nem_down_sag_df
+
+
+
+##### A. nem and A. sag in recovery vs control --- response more down regulation in A. nemorensis, and less down in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "red" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q7")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q2",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_more_down_nem_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                              fisher = result_fisher_sag_nem_surv_df,
+                                              orderBy = "fisher",
+                                              topNodes = 20)
+
+goTable_recovery_more_down_nem_df
+
+
+
+##### A. nem and A. sag in recovery vs control --- response more down regulation in A. sagittata, and less down in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_df <- combined_species_df_sag_nem_surv[!is.na(combined_species_df_sag_nem_surv$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_df <- combined_species_df_sag_nem_surv_df$color == "red" & combined_species_df_sag_nem_surv_df$quadrant %in% c("Q4")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_df <- new("topGOdata",
+                               description = "Green genes in Q2",
+                               ontology = "BP",
+                               allGenes = allGenes_numeric,
+                               geneSel = function(x) x == 1,
+                               nodeSize = 5,
+                               mapping = "org.At.tair.db",
+                               annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_df <- runTest(tGOdata_sag_nem_surv_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_more_down_sag_df <- GenTable(tGOdata_sag_nem_surv_df,
+                                              fisher = result_fisher_sag_nem_surv_df,
+                                              orderBy = "fisher",
+                                              topNodes = 20)
+
+goTable_recovery_more_down_sag_df
+
+
+write.csv(goTable_recovery_up_nem_down_sag_df, "goTable_recovery_up_nem_down_sag_df.csv")
+write.csv(goTable_recovery_up_sag_down_nem_df,  "goTable_recovery_up_sag_down_nem_df.csv")
+write.csv(goTable_recovery_more_up_sag_df, "goTable_recovery_more_up_sag_df.csv")
+write.csv(goTable_recovery_more_up_nem_df, "goTable_recovery_more_up_nem_df.csv")
+write.csv(goTable_recovery_more_down_sag_df, "goTable_recovery_more_down_sag_df.csv")
+write.csv(goTable_recovery_more_down_sag_df, "goTable_recovery_more_down_sag_df.csv")
+
+
+
+
+
+#..........................................below is pending...
+
+#######################################################
+##### A. nem and A. sag in recovery vs stress --- shared response in up-up regulation
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+
+# Merge expression data with orthologue mapping
+#combined_species_df_sag_nem_surv_wilt <- combined_species_df_sag_nem_surv_wilt %>%
+#  left_join(new_dataframe1, by = c("gene_id" = "arabis_cleaned"))
+
+
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "green" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q1", "Q8")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q1 or Q8",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_sag_nem_upup_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                    fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                    orderBy = "fisher",
+                                                    topNodes = 20)
+
+goTable_recovery_stress_sag_nem_upup_df
+
+
+##### A. nem and A. sag in recover vs control --- shared response in down-down regulation
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "green" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q7", "Q4")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q7 or Q4",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_sag_nem_downdown_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                        fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                        orderBy = "fisher",
+                                                        topNodes = 20)
+
+goTable_recovery_stress_sag_nem_downdown_df
+
+
+
+##### A. nem and A. sag in recovery vs stress --- response more up regulation in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "red" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q1")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q1",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_more_up_sag_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                   fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                   orderBy = "fisher",
+                                                   topNodes = 20)
+
+goTable_recovery_stress_more_up_sag_df
+
+
+##### A. nem and A. sag in recovery vs stress --- response more up regulation in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "red" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q8")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q8",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_more_up_nem_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                   fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                   orderBy = "fisher",
+                                                   topNodes = 20)
+
+goTable_recovery_stress_more_up_nem_df
+
+
+##### A. nem and A. sag in recovery vs stress --- response up regulation in A. sagittata, and down in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "red" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q2")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q2",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_up_sag_down_nem_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                       fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                       orderBy = "fisher",
+                                                       topNodes = 20)
+
+goTable_recovery_stress_up_sag_down_nem_df
+
+
+
+##### A. nem and A. sag in recovery vs stress --- response up regulation in A. nemorensis, and down in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "red" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q5")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q2",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_up_nem_down_sag_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                       fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                       orderBy = "fisher",
+                                                       topNodes = 20)
+
+goTable_recovery_stress_up_nem_down_sag_df
+
+
+
+##### A. nem and A. sag in recovery vs stress --- response more down regulation in A. nemorensis, and less down in A. sagittata
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "red" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q7")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q2",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_more_down_nem_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                     fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                     orderBy = "fisher",
+                                                     topNodes = 20)
+
+goTable_recovery_stress_more_down_nem_df
+
+
+
+##### A. nem and A. sag in recovery vs stress --- response more down regulation in A. sagittata, and less down in A. nemorensis
+# 1) Keep only genes with valid Arabidopsis IDs for org.At.tair.db
+combined_species_df_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt[!is.na(combined_species_df_sag_nem_surv_wilt$At), ]
+
+# 2) Define genes of interest: green AND quadrant in Q1 or Q8
+genes_of_interest_sag_nem_surv_wilt_df <- combined_species_df_sag_nem_surv_wilt_df$color == "red" & combined_species_df_sag_nem_surv_wilt_df$quadrant %in% c("Q4")
+
+# 3) Build geneList for topGO (universe = all genes in df)
+allGenes_numeric <- as.integer(genes_of_interest_sag_nem_surv_wilt_df)
+names(allGenes_numeric) <- df$At
+
+# (optional but good) remove duplicated TAIR IDs if they exist
+allGenes_numeric <- allGenes_numeric[!duplicated(names(allGenes_numeric))]
+
+# 4) Create topGO object
+tGOdata_sag_nem_surv_wilt_df <- new("topGOdata",
+                                    description = "Green genes in Q2",
+                                    ontology = "BP",
+                                    allGenes = allGenes_numeric,
+                                    geneSel = function(x) x == 1,
+                                    nodeSize = 5,
+                                    mapping = "org.At.tair.db",
+                                    annot = annFUN.org)
+
+# 5) Run enrichment (Fisher + elim)
+result_fisher_sag_nem_surv_wilt_df <- runTest(tGOdata_sag_nem_surv_wilt_df, algorithm = "elim", statistic = "fisher")
+
+# 6) Output table
+goTable_recovery_stress_more_down_sag_df <- GenTable(tGOdata_sag_nem_surv_wilt_df,
+                                                     fisher = result_fisher_sag_nem_surv_wilt_df,
+                                                     orderBy = "fisher",
+                                                     topNodes = 20)
+
+goTable_recovery_stress_more_down_sag_df
+
+
+
+
+#write.csv(goTable_recovery_stress_more_down_sag_df, "goTable_recovery_stress_more_down_sag_df.csv")
+#write.csv(goTable_recovery_stress_more_down_nem_df,  "goTable_recovery_stress_more_down_nem_df.csv")
+#write.csv(goTable_recovery_stress_more_up_sag_df, "goTable_recovery_stress_more_up_sag_df.csv")
+#write.csv(goTable_recovery_stress_more_up_nem_df, "goTable_recovery_stress_more_up_nem_df.csv")
+#write.csv(goTable_recovery_stress_more_down_sag_df, "goTable_recovery_stress_more_down_sag_df.csv")
+#write.csv(goTable_recovery_stress_more_down_sag_df, "goTable_recovery_stress_more_down_sag_df.csv")
+
+
+
+
+##### Ending on 6th January 2026, here is the end of the new analysis #############
+#########################################################################################################
+
+####### 16th February 2026, Task: Change in genes in each quadrant from Stress to Recover #######
+
+library(dplyr)
+library(ggplot2)
+
+# ----------------------------
+# 0) Pick quadrant levels
+# ----------------------------
+# Full (8) quadrants (Q3/Q6 will just be 0 if absent)
+q_levels_8 <- paste0("Q", 1:8)
+
+# If you truly want only the 6 quadrants you see (remove Q3 & Q6):
+q_levels_6 <- c("Q1","Q2","Q4","Q5","Q7","Q8")
+
+use_levels <- q_levels_6   # <-- change to q_levels_6 if you want 6x6 matrix
+
+
+# ----------------------------
+# 1) Join stress + recovery by gene
+# ----------------------------
+# Use gene_id (or At). gene_id is safest if unique across your data.
+trans_df <- combined_species_df_sag_nem %>%
+  select(gene_id, quadrant_stress = quadrant,
+         log2FC_sag_stress = log2FC_sag, log2FC_nem_stress = log2FC_nem,
+         padj_sag_stress = padj_sag, padj_nem_stress = padj_nem, padj_gxe_stress = padj_gxe) %>%
+  inner_join(
+    combined_species_df_sag_nem_surv %>%
+      select(gene_id, quadrant_recovery = quadrant,
+             log2FC_sag_rec = log2FC_sag, log2FC_nem_rec = log2FC_nem,
+             padj_sag_rec = padj_sag, padj_nem_rec = padj_nem, padj_gxe_rec = padj_gxe),
+    by = "gene_id"
+  ) %>%
+  mutate(
+    quadrant_stress   = factor(quadrant_stress, levels = use_levels),
+    quadrant_recovery = factor(quadrant_recovery, levels = use_levels)
+  )
+
+# quick check
+table(trans_df$quadrant_stress, useNA = "ifany")
+table(trans_df$quadrant_recovery, useNA = "ifany")
+
+
+# ----------------------------
+# 2) Function to make transition matrices + heatmaps
+# ----------------------------
+make_transition <- function(df, title_prefix = "All genes") {
+  
+  # counts
+  mat_counts <- table(df$quadrant_stress, df$quadrant_recovery)
+  
+  # row-wise probabilities: P(recovery quadrant | stress quadrant)
+  mat_prop <- prop.table(mat_counts, margin = 1)
+  
+  # long format for ggplot
+  counts_long <- as.data.frame(mat_counts) %>%
+    rename(Q_stress = Var1, Q_recovery = Var2, n = Freq)
+  
+  prop_long <- as.data.frame(mat_prop) %>%
+    rename(Q_stress = Var1, Q_recovery = Var2, p = Freq)
+  
+  # Heatmap (counts)
+  p_counts <- ggplot(counts_long, aes(Q_recovery, Q_stress, fill = n)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = n), size = 3) +
+    labs(
+      title = paste0(title_prefix, " — Stress quadrant → Recovery quadrant (counts)"),
+      x = "Recovery vs Control quadrant",
+      y = "Stress vs Control quadrant"
+    ) +
+    theme_minimal()
+  
+  # Heatmap (row probabilities)
+  p_prop <- ggplot(prop_long, aes(Q_recovery, Q_stress, fill = p)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = sprintf("%.2f", p)), size = 3) +
+    scale_fill_gradient(low = "white", high = "saddlebrown") +
+    labs(
+      title = paste0(title_prefix, " - Stress → Recovery"),
+      x = "Recovery vs Control",
+      y = "Stress vs Control", fill = "Proportion"
+    ) +
+    theme_minimal()
+  
+  list(
+    counts_matrix = mat_counts,
+    prop_matrix   = mat_prop,
+    plot_counts   = p_counts,
+    plot_prop     = p_prop
+  )
+}
+
+
+# ----------------------------
+# 3) A) Matrix for ALL genes (universe)
+# ----------------------------
+res_all <- make_transition(trans_df, "All genes")
+res_all$counts_matrix
+res_all$prop_matrix
+res_all$plot_counts
+res_all$plot_prop
+
+ggsave(
+  filename = "All_genes_transition_plot.pdf",
+  plot = res_all$plot_prop,
+  width = 7,
+  height = 6
+)
+
+
+
+
+# ----------------------------
+# 4) B) “Independently” for sagittata: subset genes significant in sagittata
+# ----------------------------
+# choose which contrast’s significance defines “sagittata genes”
+# Here I use stress OR recovery significant in SAG (you can tighten this if needed).
+trans_df_sag <- trans_df %>%
+  filter(padj_sag_stress < 0.05 | padj_sag_rec < 0.05)
+
+res_sag <- make_transition(trans_df_sag, "A_sagittata-significant genes")
+res_sag$counts_matrix
+res_sag$plot_prop
+
+ggsave(
+  filename = "A_sagittata_transition_plot.pdf",
+  plot = res_sag$plot_prop,
+  width = 7,
+  height = 6
+)
+
+
+# ----------------------------
+# 5) C) “Independently” for nemorensis: subset genes significant in nemorensis
+# ----------------------------
+trans_df_nem <- trans_df %>%
+  filter(padj_nem_stress < 0.05 | padj_nem_rec < 0.05)
+
+res_nem <- make_transition(trans_df_nem, "A_nemorensis-significant genes")
+res_nem$counts_matrix
+res_nem$plot_prop
+
+ggsave(
+  filename = "A_nemorensis_transition_plot.pdf",
+  plot = res_nem$plot_prop,
+  width = 7,
+  height = 6
+)
+
+# ----------------------------
+# 6) Optional: focus only on GxE genes (interaction)
+# ----------------------------
+trans_df_gxe <- trans_df %>%
+  filter(padj_gxe_stress < 0.001 | padj_gxe_rec < 0.001)
+
+res_gxe <- make_transition(trans_df_gxe, "GxE genes")
+res_gxe$plot_prop
+
+######## End on 16th February 2026 ########################
+
+########### Start on 20th February  ---- Task: Slightly changed, added Quadrant Q3 and Q6 (for genes with no significant interaction)  #######
+############Change in genes in each quadrant from Stress to Recover #######
+
+# ----------------------------
+# 0) Quadrant levels (8)
+# ----------------------------
+q_levels_8 <- paste0("Q", 1:8)
+use_levels <- q_levels_8
+
+
+# ----------------------------
+# Helper: build "quadrant_group" based on color rules
+# ----------------------------
+# Rules:
+# - Q3: color green AND log2FC_sag > 0
+# - Q6: color green AND log2FC_sag < 0
+# - Else: keep original quadrant ONLY for red genes
+# - Everything else becomes NA (excluded later)
+make_quadrant_group <- function(df, quad_col = "quadrant", color_col = "color", fc_col = "log2FC_sag") {
+  
+  df %>%
+    mutate(
+      quadrant_group = case_when(
+        .data[[color_col]] == "green" & .data[[fc_col]] > 0 ~ "Q3",
+        .data[[color_col]] == "green" & .data[[fc_col]] < 0 ~ "Q6",
+        .data[[color_col]] == "red" ~ as.character(.data[[quad_col]]),
+        TRUE ~ NA_character_
+      ),
+      quadrant_group = factor(quadrant_group, levels = use_levels)
+    )
+}
+
+
+# ----------------------------
+# 1) Prepare stress and recovery data with quadrant_group
+# ----------------------------
+stress_df <- combined_species_df_sag_nem %>%
+  make_quadrant_group(quad_col = "quadrant", color_col = "color", fc_col = "log2FC_sag") %>%
+  select(
+    gene_id,
+    quadrant_stress = quadrant_group,
+    log2FC_sag_stress = log2FC_sag, log2FC_nem_stress = log2FC_nem,
+    padj_sag_stress = padj_sag, padj_nem_stress = padj_nem, padj_gxe_stress = padj_gxe
+  )
+
+recovery_df <- combined_species_df_sag_nem_surv %>%
+  make_quadrant_group(quad_col = "quadrant", color_col = "color", fc_col = "log2FC_sag") %>%
+  select(
+    gene_id,
+    quadrant_recovery = quadrant_group,
+    log2FC_sag_rec = log2FC_sag, log2FC_nem_rec = log2FC_nem,
+    padj_sag_rec = padj_sag, padj_nem_rec = padj_nem, padj_gxe_rec = padj_gxe
+  )
+
+# ----------------------------
+# 2) Join stress + recovery and drop NA quadrant groups
+# ----------------------------
+trans_df <- stress_df %>%
+  inner_join(recovery_df, by = "gene_id") %>%
+  filter(!is.na(quadrant_stress), !is.na(quadrant_recovery))
+
+# quick check
+table(trans_df$quadrant_stress, useNA = "ifany")
+table(trans_df$quadrant_recovery, useNA = "ifany")
+
+
+# ----------------------------
+# 3) Function to make transition matrices + heatmaps
+# ----------------------------
+make_transition <- function(df, title_prefix = "All genes") {
+  
+  mat_counts <- table(df$quadrant_stress, df$quadrant_recovery)
+  mat_prop   <- prop.table(mat_counts, margin = 1)
+  
+  counts_long <- as.data.frame(mat_counts) %>%
+    rename(Q_stress = Var1, Q_recovery = Var2, n = Freq)
+  
+  prop_long <- as.data.frame(mat_prop) %>%
+    rename(Q_stress = Var1, Q_recovery = Var2, p = Freq)
+  
+  p_counts <- ggplot(counts_long, aes(Q_recovery, Q_stress, fill = n)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = n), size = 3) +
+    labs(
+      title = paste0(title_prefix, " — Stress quadrant → Recovery quadrant (counts)"),
+      x = "Recovery vs Control quadrant",
+      y = "Stress vs Control quadrant"
+    ) +
+    theme_minimal()
+  
+  p_prop <- ggplot(prop_long, aes(Q_recovery, Q_stress, fill = p)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = sprintf("%.2f", p)), size = 3) +
+    scale_fill_gradient(low = "white", high = "saddlebrown") +
+    labs(
+      title = paste0(title_prefix, " - Stress → Recovery"),
+      x = "Recovery vs Control",
+      y = "Stress vs Control",
+      fill = "Proportion"
+    ) +
+    theme_minimal()
+  
+  list(
+    counts_matrix = mat_counts,
+    prop_matrix   = mat_prop,
+    plot_counts   = p_counts,
+    plot_prop     = p_prop
+  )
+}
+
+# ----------------------------
+# 4) Run transitions
+# ----------------------------
+res_all <- make_transition(trans_df, "Quadrant groups (red + green-split Q3/Q6)")
+res_all$counts_matrix
+res_all$plot_prop
+
+
+
+
+# ----------------------------
+# 4) B) “Independently” for sagittata: subset genes significant in sagittata
+# ----------------------------
+# choose which contrast’s significance defines “sagittata genes”
+# Here I use stress OR recovery significant in SAG (you can tighten this if needed).
+trans_df_sag <- trans_df %>%
+  filter(padj_sag_stress < 0.05 | padj_sag_rec < 0.05)
+
+res_sag <- make_transition(trans_df_sag, "A_sagittata-significant genes")
+res_sag$counts_matrix
+res_sag$plot_prop
+
+ggsave(
+  filename = "A_sagittata_transition_plot.pdf",
+  plot = res_sag$plot_prop,
+  width = 7,
+  height = 6
+)
+
+
+# ----------------------------
+# 5) C) “Independently” for nemorensis: subset genes significant in nemorensis
+# ----------------------------
+trans_df_nem <- trans_df %>%
+  filter(padj_nem_stress < 0.05 | padj_nem_rec < 0.05)
+
+res_nem <- make_transition(trans_df_nem, "A_nemorensis-significant genes")
+res_nem$counts_matrix
+res_nem$plot_prop
+
+ggsave(
+  filename = "A_nemorensis_transition_plot.pdf",
+  plot = res_nem$plot_prop,
+  width = 7,
+  height = 6
+)
+
+
+################ End on 20th Febuary 2026 ###########################
+
+
+
