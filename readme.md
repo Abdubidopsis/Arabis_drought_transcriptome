@@ -29,6 +29,10 @@ It includes:
 - **add_logMedTPM_no0_balanced_classification.2.R** — balanced classification pipeline for expression prediction
 - **FDR_calc_multi.v1.0.R** — multiple-testing FDR calculations
 - **corr_prediction_multi.v1.0.R** — correlation-based expression prediction across datasets
+- **EPM_cluster_venn_analysis.sz.v1.R**
+- **EPM_DGEenrichment_analyses.v1.clusters.R**
+- **EPM_Quadrant_enrichment_swaps_2025F.v2.1.R**
+- **UMAP_cluster_evolution_revision.recovery.0.R**
 
 ## Python
 
@@ -43,9 +47,11 @@ It includes:
 - **Table-S3.xlsx** – Differential expression analysis across stress and recovery phases  
 - **Table-S7.ods** – Extracted EPMs from treatments with cluster assignment & TF database matches  
 - **Table-S9.ods** – Filtered genome-wide annotations of EPM occurrence  
-- **Table-S10.ods** – DEGs linked to Gene Ontology terms and associated EPMs
-- **Table-S12.ods** – EPM and TFBS occurrence in *miR408* locus
-- **Table-S13.csv** - miRNA normalized expression matrix for Arabis sagittata and Arabis nemorensis in control, wilting and recovery
+- **Table-S10.ods** – Metrics for EPM cluster silhouette width, compactness robustness and evolution of uniqueness
+- **Table-S11.ods** – Analyzes gene expression data linking differentially expressed genes to Gene Ontology terms with EPMs
+- **Table-S12.xlsx** – Candidate transcription factors driving species-specific responses to wilting stress
+- **Table-S13.ods** – EPM and TFBS occurrence in *miR408* locus
+- **Table-S14.csv** - miRNA normalized expression matrix for Arabis sagittata and Arabis nemorensis in control, wilting and recovery
 
 ### 🧬 Sequence Alignments
 - **File-S1.fas** – Alignment of *miR408* with EPMs across *A. thaliana*, *A. nemorensis*, *A. sagittata*  
